@@ -3,23 +3,29 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Product; // Importa tu modelo Product
+use App\Models\Product; // ¡Importa tu modelo Product!
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException; // Para manejar errores de validación
+use Illuminate\Database\Eloquent\ModelNotFoundException; // Para manejar 404 de modelos
 
 class ProductController extends Controller
 {
     /**
-     * Muestra una lista de recursos.
+     * Display a listing of the resource.
+     *
+     * @return \Illuminate\Http\Response
      */
     public function index()
     {
-        $products = Product::all(); // Obtiene todos los productos
-        return response()->json($products); // Devuelve los productos como JSON
+        $products = Product::all();
+        return response()->json($products);
     }
 
     /**
-     * Almacena un nuevo recurso.
+     * Store a newly created resource in storage.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
      */
     public function store(Request $request)
     {
@@ -33,70 +39,98 @@ class ProductController extends Controller
             ]);
 
             $product = Product::create($request->all());
-            return response()->json($product, 201); // 201 Created
+            return response()->json([
+                'message' => 'Producto creado exitosamente',
+                'product' => $product
+            ], 201); // 201 Created
         } catch (ValidationException $e) {
             return response()->json([
                 'message' => 'Validation Failed',
                 'errors' => $e->errors()
             ], 422); // 422 Unprocessable Entity
+        } catch (\Exception $e) {
+            // Captura cualquier otro error general
+            return response()->json([
+                'message' => 'Error interno del servidor',
+                'error' => $e->getMessage()
+            ], 500); // 500 Internal Server Error
         }
     }
 
     /**
-     * Muestra el recurso especificado.
+     * Display the specified resource.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
      */
-    public function show(string $id)
+    public function show($id)
     {
-        $product = Product::find($id); // Busca el producto por ID
-
-        if (!$product) {
-            return response()->json(['message' => 'Product not found'], 404); // 404 Not Found
-        }
-
-        return response()->json($product);
-    }
-
-    /**
-     * Actualiza el recurso especificado.
-     */
-    public function update(Request $request, string $id)
-    {
-        $product = Product::find($id);
-
-        if (!$product) {
-            return response()->json(['message' => 'Product not found'], 404);
-        }
-
         try {
+            $product = Product::findOrFail($id); // Encuentra el producto o lanza una excepción 404
+            return response()->json($product);
+        } catch (ModelNotFoundException $e) {
+            return response()->json(['message' => 'Producto no encontrado'], 404);
+        }
+    }
+
+    /**
+     * Update the specified resource in storage.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function update(Request $request, $id)
+    {
+        try {
+            $product = Product::findOrFail($id); // Encuentra el producto o lanza una excepción 404
+
             $request->validate([
-                'name' => 'sometimes|required|string|max:255', // 'sometimes' para que no sea requerido si no se envía
+                'name' => 'sometimes|required|string|max:255', // 'sometimes' para que solo se valide si está presente
                 'description' => 'nullable|string',
                 'price' => 'sometimes|required|numeric|min:0',
                 'stock' => 'sometimes|required|integer|min:0',
             ]);
 
             $product->update($request->all());
-            return response()->json($product);
+            return response()->json([
+                'message' => 'Producto actualizado exitosamente',
+                'product' => $product
+            ]);
+        } catch (ModelNotFoundException $e) {
+            return response()->json(['message' => 'Producto no encontrado'], 404);
         } catch (ValidationException $e) {
             return response()->json([
                 'message' => 'Validation Failed',
                 'errors' => $e->errors()
             ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Error interno del servidor',
+                'error' => $e->getMessage()
+            ], 500);
         }
     }
 
     /**
-     * Elimina el recurso especificado.
+     * Remove the specified resource from storage.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
      */
-    public function destroy(string $id)
+    public function destroy($id)
     {
-        $product = Product::find($id);
-
-        if (!$product) {
-            return response()->json(['message' => 'Product not found'], 404);
+        try {
+            $product = Product::findOrFail($id); // Encuentra el producto o lanza una excepción 404
+            $product->delete();
+            return response()->json(['message' => 'Producto eliminado exitosamente'], 204); // 204 No Content
+        } catch (ModelNotFoundException $e) {
+            return response()->json(['message' => 'Producto no encontrado'], 404);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Error interno del servidor',
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        $product->delete();
-        return response()->json(null, 204); // 204 No Content
     }
 }
