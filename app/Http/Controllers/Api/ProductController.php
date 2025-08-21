@@ -10,6 +10,12 @@ use Illuminate\Database\Eloquent\ModelNotFoundException; // Para manejar 404 de 
 
 class ProductController extends Controller
 {
+    public function __construct()
+    {
+        if ($_POST) {
+
+        }
+    }
     /**
      * Display a listing of the resource.
      *
@@ -29,32 +35,21 @@ class ProductController extends Controller
      */
     public function store(Request $request)
     {
-        try {
-            // Reglas de validación
-            $request->validate([
-                'name' => 'required|string|max:255',
-                'description' => 'nullable|string',
-                'price' => 'required|numeric|min:0',
-                'stock' => 'required|integer|min:0',
-            ]);
+        // Reglas de validación
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'price' => 'required|numeric|min:0',
+            'stock' => 'required|integer|min:0',
+        ]);
 
-            $product = Product::create($request->all());
-            return response()->json([
-                'message' => 'Producto creado exitosamente',
-                'product' => $product
-            ], 201); // 201 Created
-        } catch (ValidationException $e) {
-            return response()->json([
-                'message' => 'Validation Failed',
-                'errors' => $e->errors()
-            ], 422); // 422 Unprocessable Entity
-        } catch (\Exception $e) {
-            // Captura cualquier otro error general
-            return response()->json([
-                'message' => 'Error interno del servidor',
-                'error' => $e->getMessage()
-            ], 500); // 500 Internal Server Error
-        }
+        $product = Product::create($request->all());
+        
+        return response()->json([
+            'message' => 'Producto creado exitosamente',
+            'product' => $product
+        ], 201);
+
     }
 
     /**
@@ -82,34 +77,22 @@ class ProductController extends Controller
      */
     public function update(Request $request, $id)
     {
-        try {
-            $product = Product::findOrFail($id); // Encuentra el producto o lanza una excepción 404
+        $product = Product::findOrFail($id);
 
-            $request->validate([
-                'name' => 'sometimes|required|string|max:255', // 'sometimes' para que solo se valide si está presente
-                'description' => 'nullable|string',
-                'price' => 'sometimes|required|numeric|min:0',
-                'stock' => 'sometimes|required|integer|min:0',
-            ]);
+        $validatedData = $request->validate([
+            'name' => 'sometimes|required|string|max:255',
+            'description' => 'nullable|string',
+            'price' => 'sometimes|required|numeric|min:0',
+            'stock' => 'sometimes|required|integer|min:0',
+        ]);
 
-            $product->update($request->all());
-            return response()->json([
-                'message' => 'Producto actualizado exitosamente',
-                'product' => $product
-            ]);
-        } catch (ModelNotFoundException $e) {
-            return response()->json(['message' => 'Producto no encontrado'], 404);
-        } catch (ValidationException $e) {
-            return response()->json([
-                'message' => 'Validation Failed',
-                'errors' => $e->errors()
-            ], 422);
-        } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'Error interno del servidor',
-                'error' => $e->getMessage()
-            ], 500);
-        }
+        $product->update($validatedData);
+
+        // 4. Retorna la respuesta JSON.
+        return response()->json([
+            'message' => 'Producto actualizado exitosamente',
+            'product' => $product
+        ]);
     }
 
     /**
@@ -120,17 +103,13 @@ class ProductController extends Controller
      */
     public function destroy($id)
     {
-        try {
-            $product = Product::findOrFail($id); // Encuentra el producto o lanza una excepción 404
-            $product->delete();
-            return response()->json(['message' => 'Producto eliminado exitosamente'], 204); // 204 No Content
-        } catch (ModelNotFoundException $e) {
-            return response()->json(['message' => 'Producto no encontrado'], 404);
-        } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'Error interno del servidor',
-                'error' => $e->getMessage()
-            ], 500);
-        }
+
+        $product = Product::findOrFail($id); // Encuentra el producto o lanza una excepción 404
+        $product->delete();
+
+        // 4. Retorna la respuesta JSON.
+        return response()->json([
+            'message' => 'Producto eliminado exitosamente',
+        ]);
     }
 }
